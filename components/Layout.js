@@ -1,8 +1,23 @@
 import Link from "next/link";
+import Head from "next/head";
 import Sidebar from "./Sidebar";
+
+const isBrowser = typeof window !== "undefined";
 
 const Layout = ({ children }) => (
     <div className="max-w-5xl mx-auto">
+        <Head>
+            {isBrowser && (
+                <>
+                    <script
+                        async
+                        defer
+                        data-domain="iwriday.com"
+                        src="https://plausible.io/js/plausible.outbound-links.js"
+                    ></script>
+                </>
+            )}
+        </Head>
         <div className="text-center text-white">
             <Link href="/">
                 <h1 className="cursor-pointer text-5xl font-bold pt-4">
