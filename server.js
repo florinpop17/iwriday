@@ -5,7 +5,7 @@ const Twit = require("twit");
 const { createClient } = require("@supabase/supabase-js");
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_SECRET_KEY;
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const T = new Twit({
@@ -23,16 +23,18 @@ const threads = {};
 
 console.log("Stream started! Go on!!!");
 
+// TODO: RUN THE BELOW CODE EVERY 1 MINUTE
+
 T.get(
     "search/tweets",
-    { q: `"${query}"`, count: 50 },
+    { q: `"${query}"`, count: 12 },
     function (err, data, response) {
         const { statuses } = data;
 
         if (statuses) {
             statuses.forEach((status) => {
                 // TODO: Reply to this tweet
-                const text = sanitizeHtml(status.text);
+                const text = status.text;
 
                 if (text === query) {
                     const user = status.user.screen_name;
