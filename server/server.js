@@ -18,7 +18,6 @@ const T = new Twit({
 const keyword = "add";
 const username = "@iWriDay";
 const query = `${username} ${keyword}`;
-
 const threads = {};
 
 console.log("Stream started! Go on!!!");
@@ -27,13 +26,12 @@ console.log("Stream started! Go on!!!");
 
 T.get(
     "search/tweets",
-    { q: `"${query}"`, count: 12 },
+    { q: `"${query}"`, count: 100 },
     function (err, data, response) {
         const { statuses } = data;
 
         if (statuses) {
             statuses.forEach((status) => {
-                // TODO: Reply to this tweet
                 const text = status.text;
 
                 if (text === query) {
@@ -53,6 +51,7 @@ T.get(
                     if (isReply) {
                         const parentId = status.in_reply_to_status_id_str;
                         const referenceId = id;
+                        // TODO: check if the id is already saved in the DB and not call this function if it is
                         getParentTweets(parentId, referenceId);
                         threads[referenceId] = [tweet];
                     }
@@ -72,7 +71,7 @@ function getParentTweets(parentId, referenceId) {
         { id: parentId, tweet_mode: "extended" },
         async function (err, status, response) {
             const user = status.user.screen_name;
-            const text = sanitizeHtml(status.full_text + "\n\n");
+            const text = sanitizeHtml(status.full_text + "\n\n\n");
             const isReply = !!status.in_reply_to_status_id_str;
             const id = status.id_str;
             const date = status.created_at;
@@ -110,7 +109,7 @@ function getParentTweets(parentId, referenceId) {
                     .slice(0, -1)
                     .reduce((acc, tweet) => (acc += tweet.text), "")
                     // remove the last 2 \n
-                    .slice(0, -2);
+                    .slice(0, -3);
                 const word_count = full_text
                     .replace(/\s\s+/g, " ")
                     .trim()
@@ -132,7 +131,7 @@ function getParentTweets(parentId, referenceId) {
                         .from("posts")
                         .insert([
                             {
-                                id,
+                                id: referenceId,
                                 full_text,
                                 date,
                                 word_count,
@@ -192,25 +191,6 @@ function getParentTweets(parentId, referenceId) {
                         console.log(post, postError);
                     }
                 }
-
-                // supabase
-                //     .from("posts")
-                //     .insert([
-                //         { id, username, full_text, date, word_count, url, user_id },
-                //     ])
-                //     .then((data) => {
-                //         console.log(data);
-                //     })
-                //     .catch((error) => console.error(error));
-
-                // supabase
-                //     .from("threads")
-                //     .delete()
-                //     .eq("id", id)
-                //     .then((data) => {
-                //         console.log(data);
-                //     })
-                //     .catch((error) => console.error(error));
 
                 delete threads[referenceId];
             }

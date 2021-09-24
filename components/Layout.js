@@ -1,10 +1,11 @@
 import Link from "next/link";
 import Head from "next/head";
 import Sidebar from "./Sidebar";
+import PopupNewsletter from "./PopupNewsletter";
 
 const isBrowser = typeof window !== "undefined";
 
-const Layout = ({ children }) => (
+const Layout = ({ children, showSidebar = true }) => (
     <div className="max-w-5xl mx-auto px-4">
         <Head>
             {isBrowser && (
@@ -51,11 +52,15 @@ const Layout = ({ children }) => (
             </p>
         </div>
         <div className="flex space-x-4">
-            <main className="md:w-3/4">{children}</main>
-            <div className="md:w-1/4 md:block hidden">
-                <Sidebar />
-            </div>
+            <main className="md:w-3/4 mx-auto">{children}</main>
+            {showSidebar && (
+                <div className="md:w-1/4 md:block hidden">
+                    <Sidebar />
+                </div>
+            )}
         </div>
+
+        <PopupNewsletter />
     </div>
 );
 
