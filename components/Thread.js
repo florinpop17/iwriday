@@ -19,12 +19,7 @@ const Thread = ({
     };
 
     return (
-        <div
-            className="bg-purple-800 relative text-white my-4 p-4 rounded-lg shadow-lg"
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-        >
+        <div className="bg-purple-800 relative text-white my-4 p-4 rounded-lg shadow-lg">
             <span className="bg-purple-700 text-xs text-purple-200 font-medium rounded-lg py-1 px-2 absolute top-4 right-12">
                 {word_count} {word_count < 2 ? "word" : "words"}
             </span>
@@ -55,6 +50,7 @@ const Thread = ({
                 className="absolute top-4 right-4 text-purple-400"
                 href={url}
                 target="_blank"
+                rel="noreferrer"
             >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
