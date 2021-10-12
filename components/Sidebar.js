@@ -61,6 +61,7 @@ const Sidebar = () => {
                         className="font-bold text-purple-400"
                         href="https://twitter.com/florinpop1705"
                         target="_blank"
+                        rel="noreferrer"
                     >
                         Florin Pop
                     </a>
