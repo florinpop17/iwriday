@@ -27,36 +27,47 @@ console.log("Stream started! Go on!!!");
 T.get(
     "search/tweets",
     { q: `"${query}"`, count: 100 },
-    function (err, data, response) {
+    async function (err, data, response) {
         const { statuses } = data;
 
         if (statuses) {
-            statuses.forEach((status) => {
+            for (const status of statuses) {
                 const text = status.text;
 
-                if (text === query) {
-                    const user = status.user.screen_name;
-                    const isReply = !!status.in_reply_to_status_id_str;
+                if (text.toLowerCase() === query.toLowerCase()) {
                     const id = status.id_str;
-                    const date = status.created_at;
+                    const isReply = !!status.in_reply_to_status_id_str;
 
-                    const tweet = {
-                        id,
-                        user,
-                        text,
-                        isReply,
-                        date,
-                    };
+                    // check if the post is already in the DB
+                    const post = await getPostById(id);
 
+                    console.log(post);
+
+                    if (post) {
+                        console.log("###: Post already exists");
+                        continue;
+                    } else {
+                        console.log("###: NEW POST!");
+                    }
+
+                    // check if this is a reply
                     if (isReply) {
+                        const date = status.created_at;
+                        const username = status.user.screen_name;
                         const parentId = status.in_reply_to_status_id_str;
+
                         const referenceId = id;
-                        // TODO: check if the id is already saved in the DB and not call this function if it is
+
                         getParentTweets(parentId, referenceId);
-                        threads[referenceId] = [tweet];
+
+                        threads[referenceId] = {
+                            username,
+                            date,
+                            tweets: [text],
+                        };
                     }
                 }
-            });
+            }
         }
 
         if (err) {
@@ -70,126 +81,110 @@ function getParentTweets(parentId, referenceId) {
         `statuses/show`,
         { id: parentId, tweet_mode: "extended" },
         async function (err, status, response) {
-            const user = status.user.screen_name;
             const text = sanitizeHtml(status.full_text + "\n\n\n");
             const isReply = !!status.in_reply_to_status_id_str;
-            const id = status.id_str;
             const date = status.created_at;
 
             // don't save the thread if the @add command is not added in the same day as the thread was written
             if (
-                !isSameDay(
-                    new Date(date),
-                    new Date(threads[referenceId][0].date)
-                )
+                !isSameDay(new Date(date), new Date(threads[referenceId].date))
             ) {
                 return;
             }
 
-            const tweet = {
-                id,
-                user,
-                text,
-                isReply,
-            };
-
             if (isReply) {
                 const parentId = status.in_reply_to_status_id_str;
                 getParentTweets(parentId, referenceId);
-                threads[referenceId].push(tweet);
+
+                threads[referenceId].tweets.push(text);
             } else {
-                threads[referenceId].push(tweet);
+                threads[referenceId].tweets.push(text);
 
                 // save to the DB
-                const username = tweet.user;
-                const url = `https://twitter.com/${username}/status/${id}`;
-                const date = threads[referenceId][0].date;
-                const full_text = threads[referenceId]
+                const username = threads[referenceId].username;
+                const date = threads[referenceId].date;
+                const url = `https://twitter.com/${username}/status/${parentId}`;
+
+                const full_text = threads[referenceId].tweets
                     .reverse()
                     .slice(0, -1)
-                    .reduce((acc, tweet) => (acc += tweet.text), "")
-                    // remove the last 2 \n
+                    .reduce((acc, text) => (acc += text), "")
+                    // remove the last 3 \n
                     .slice(0, -3);
+
                 const word_count = full_text
                     .replace(/\s\s+/g, " ")
                     .trim()
                     .split(" ").length;
 
-                const { data, error } = await supabase
+                // check if there is a user
+                const { data: user, error: userError } = await supabase
                     .from("public_users")
                     .select("id, streak, last_day_posted")
-                    .eq("username", username);
+                    .eq("username", username)
+                    .single();
 
-                console.log("data", data);
-
-                if (data.length > 0) {
+                if (user) {
                     console.log("user exist", username);
-                    const { id: user_id, streak, last_day_posted } = data[0];
+
+                    const { id: user_id, streak, last_day_posted } = user;
                     // we have a user, use it
                     // create the post with the data
                     const { data: post, error: postError } = await supabase
                         .from("posts")
-                        .insert([
-                            {
-                                id: referenceId,
-                                full_text,
-                                date,
-                                word_count,
-                                url,
-                                user_id,
-                            },
-                        ]);
+                        .insert({
+                            id: referenceId,
+                            full_text,
+                            date,
+                            word_count,
+                            url,
+                            user_id,
+                        });
 
-                    // console.log(post);
-
-                    if (!postError) {
+                    if (post) {
                         const sameDay = isSameDay(
                             new Date(last_day_posted),
                             new Date(date)
                         );
+
                         const newStreak = sameDay ? streak : streak + 1;
 
-                        const { data: user, error: userError } = await supabase
+                        // update the user with the coresponding streak and last_day_posted
+                        await supabase
                             .from("public_users")
                             .update({
                                 streak: newStreak,
                                 last_day_posted: date,
                             })
                             .match({ id: user_id });
-
-                        // console.log(user);
                     }
                 } else {
                     console.log("NEW user", username);
                     // create the user
                     const { data: user, error: userError } = await supabase
                         .from("public_users")
-                        .insert([
-                            {
-                                streak: 1,
-                                last_day_posted: date, // figure out if this is ok
-                                username,
-                            },
-                        ]);
+                        .insert({
+                            streak: 1,
+                            last_day_posted: date,
+                            username,
+                        })
+                        .single();
 
-                    const user_id = user[0].id;
+                    const user_id = user.id;
                     // console.log(user);
 
-                    if (!userError) {
-                        const { data: post, error: postError } = await supabase
+                    if (user) {
+                        await supabase
                             .from("posts")
-                            .insert([
-                                {
-                                    id,
-                                    full_text,
-                                    date,
-                                    word_count,
-                                    url,
-                                    user_id,
-                                },
-                            ]);
-
-                        // console.log(post, postError);
+                            .insert({
+                                id: referenceId,
+                                full_text,
+                                date,
+                                word_count,
+                                url,
+                                user_id,
+                            })
+                            .single();
                     }
                 }
 
@@ -206,3 +201,31 @@ function isSameDay(date1, date2) {
         date1.getDate() === date2.getDate()
     );
 }
+
+async function getPostById(id) {
+    const { data: post, error: postError } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+    if (postError) {
+        console.error(postError);
+    }
+
+    return post;
+}
+
+// async function getUserByUsername(username) {
+//     const { data: user, error: userError } = await supabase
+//         .from("public_users")
+//         .select("id")
+//         .eq("username", username)
+//         .single();
+
+//     if (userError) {
+//         console.error(userError);
+//     }
+
+//     return user;
+// }

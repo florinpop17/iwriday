@@ -54,7 +54,7 @@ const Sidebar = () => {
                     <span>🔥 {streak}</span>
                 </div>
             ))}
-            <div className="text-purple-200 mt-10">
+            <div className="text-purple-200 mt-10 text-center">
                 <p>
                     Project built by{" "}
                     <a
@@ -63,16 +63,7 @@ const Sidebar = () => {
                         target="_blank"
                     >
                         Florin Pop
-                    </a>{" "}
-                    as part of the{" "}
-                    <a
-                        className="font-bold text-purple-400"
-                        href="https://makemoney.dev/blog/from-0-to-100k"
-                        target="_blank"
-                    >
-                        $100k Challenge
                     </a>
-                    .
                 </p>
             </div>
         </div>
