@@ -23,58 +23,67 @@ const threads = {};
 console.log("Stream started! Go on!!!");
 
 // TODO: RUN THE BELOW CODE EVERY 1 MINUTE
+export default function handler(req, res) {
+    // check for a password or smth
 
-T.get(
-    "search/tweets",
-    { q: `"${query}"`, count: 100 },
-    async function (err, data, response) {
-        const { statuses } = data;
+    searchTweets();
 
-        if (statuses) {
-            for (const status of statuses) {
-                const text = status.text;
+    res.status(200).json({ hello: "world" });
+}
 
-                if (text.toLowerCase() === query.toLowerCase()) {
-                    const id = status.id_str;
-                    const isReply = !!status.in_reply_to_status_id_str;
+function searchTweets() {
+    T.get(
+        "search/tweets",
+        { q: `"${query}"`, count: 100 },
+        async function (err, data, response) {
+            const { statuses } = data;
 
-                    // check if the post is already in the DB
-                    const post = await getPostById(id);
+            if (statuses) {
+                for (const status of statuses) {
+                    const text = status.text;
 
-                    // console.log(post);
+                    if (text.toLowerCase() === query.toLowerCase()) {
+                        const id = status.id_str;
+                        const isReply = !!status.in_reply_to_status_id_str;
 
-                    if (post) {
-                        // console.log("###: Post already exists");
-                        continue;
-                    } else {
-                        // console.log("###: NEW POST!");
-                    }
+                        // check if the post is already in the DB
+                        const post = await getPostById(id);
 
-                    // check if this is a reply
-                    if (isReply) {
-                        const date = status.created_at;
-                        const username = status.user.screen_name;
-                        const parentId = status.in_reply_to_status_id_str;
+                        // console.log(post);
 
-                        const referenceId = id;
+                        if (post) {
+                            // console.log("###: Post already exists");
+                            continue;
+                        } else {
+                            // console.log("###: NEW POST!");
+                        }
 
-                        getParentTweets(parentId, referenceId);
+                        // check if this is a reply
+                        if (isReply) {
+                            const date = status.created_at;
+                            const username = status.user.screen_name;
+                            const parentId = status.in_reply_to_status_id_str;
 
-                        threads[referenceId] = {
-                            username,
-                            date,
-                            tweets: [text],
-                        };
+                            const referenceId = id;
+
+                            getParentTweets(parentId, referenceId);
+
+                            threads[referenceId] = {
+                                username,
+                                date,
+                                tweets: [text],
+                            };
+                        }
                     }
                 }
             }
-        }
 
-        if (err) {
-            // console.log(err);
+            if (err) {
+                // console.log(err);
+            }
         }
-    }
-);
+    );
+}
 
 function getParentTweets(parentId, referenceId) {
     T.get(
