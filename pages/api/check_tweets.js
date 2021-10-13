@@ -198,8 +198,6 @@ export default function handler(req, res) {
                                 .single();
                         }
                     }
-
-                    delete threads[referenceId];
                 }
             }
         );
@@ -243,5 +241,5 @@ export default function handler(req, res) {
 
     // END OF THE CODE
 
-    res.status(200).json({ hello: "world" });
+    res.status(200).json(threads);
 }
