@@ -6,240 +6,242 @@ const { createClient } = require("@supabase/supabase-js");
 
 // TODO: RUN THE BELOW CODE EVERY 1 MINUTE
 export default function handler(req, res) {
-    // const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    // const SUPABASE_KEY = process.env.SUPABASE_SECRET_KEY;
-    // const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const SUPABASE_KEY = process.env.SUPABASE_SECRET_KEY;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // const T = new Twit({
-    //     consumer_key: process.env.APPLICATION_CONSUMER_KEY_HERE,
-    //     consumer_secret: process.env.APPLICATION_CONSUMER_SECRET_HERE,
-    //     access_token: process.env.ACCESS_TOKEN_KEY,
-    //     access_token_secret: process.env.ACCESS_TOKEN_SECRET,
-    // });
+    const T = new Twit({
+        consumer_key: process.env.APPLICATION_CONSUMER_KEY_HERE,
+        consumer_secret: process.env.APPLICATION_CONSUMER_SECRET_HERE,
+        access_token: process.env.ACCESS_TOKEN_KEY,
+        access_token_secret: process.env.ACCESS_TOKEN_SECRET,
+    });
 
-    // const keyword = "add";
-    // const username = "@iWriDay";
-    // const query = `${username} ${keyword}`;
-    // const threads = {};
+    const keyword = "add";
+    const username = "@iWriDay";
+    const query = `${username} ${keyword}`;
+    const threads = {};
 
-    // console.log("Stream started! Go on!!!");
-    // // check for a password or smth
+    console.log("Stream started! Go on!!!");
+    // check for a password or smth
 
-    // searchTweets();
+    searchTweets();
 
-    // // THE CODE!!!
+    // THE CODE!!!
 
-    // function searchTweets() {
-    //     T.get(
-    //         "search/tweets",
-    //         { q: `"${query}"`, count: 100 },
-    //         async function (err, data, response) {
-    //             const { statuses } = data;
+    function searchTweets() {
+        T.get(
+            "search/tweets",
+            { q: `"${query}"`, count: 100 },
+            async function (err, data, response) {
+                const { statuses } = data;
 
-    //             if (statuses) {
-    //                 for (const status of statuses) {
-    //                     const text = status.text;
+                console.log(statuses);
 
-    //                     if (text.toLowerCase() === query.toLowerCase()) {
-    //                         const id = status.id_str;
-    //                         const isReply = !!status.in_reply_to_status_id_str;
+                if (statuses) {
+                    for (const status of statuses) {
+                        const text = status.text;
 
-    //                         // check if the post is already in the DB
-    //                         const post = await getPostById(id);
+                        if (text.toLowerCase() === query.toLowerCase()) {
+                            const id = status.id_str;
+                            const isReply = !!status.in_reply_to_status_id_str;
 
-    //                         // console.log(post);
+                            // check if the post is already in the DB
+                            const post = await getPostById(id);
 
-    //                         if (post) {
-    //                             // console.log("###: Post already exists");
-    //                             continue;
-    //                         } else {
-    //                             // console.log("###: NEW POST!");
-    //                         }
+                            // console.log(post);
 
-    //                         // check if this is a reply
-    //                         if (isReply) {
-    //                             const date = status.created_at;
-    //                             const username = status.user.screen_name;
-    //                             const parentId =
-    //                                 status.in_reply_to_status_id_str;
+                            if (post) {
+                                console.log("###: Post already exists");
+                                continue;
+                            } else {
+                                console.log("###: NEW POST!");
+                            }
 
-    //                             const referenceId = id;
+                            // check if this is a reply
+                            if (isReply) {
+                                const date = status.created_at;
+                                const username = status.user.screen_name;
+                                const parentId =
+                                    status.in_reply_to_status_id_str;
 
-    //                             getParentTweets(parentId, referenceId);
+                                const referenceId = id;
 
-    //                             threads[referenceId] = {
-    //                                 username,
-    //                                 date,
-    //                                 tweets: [text],
-    //                             };
-    //                         }
-    //                     }
-    //                 }
-    //             }
+                                getParentTweets(parentId, referenceId);
 
-    //             if (err) {
-    //                 // console.log(err);
-    //             }
-    //         }
-    //     );
-    // }
+                                threads[referenceId] = {
+                                    username,
+                                    date,
+                                    tweets: [text],
+                                };
+                            }
+                        }
+                    }
+                }
 
-    // function getParentTweets(parentId, referenceId) {
-    //     T.get(
-    //         `statuses/show`,
-    //         { id: parentId, tweet_mode: "extended" },
-    //         async function (err, status, response) {
-    //             const text = sanitizeHtml(status.full_text + "\n\n\n");
-    //             const isReply = !!status.in_reply_to_status_id_str;
-    //             const date = status.created_at;
+                if (err) {
+                    // console.log(err);
+                }
+            }
+        );
+    }
 
-    //             // don't save the thread if the @add command is not added in the same day as the thread was written
-    //             if (
-    //                 !isSameDay(
-    //                     new Date(date),
-    //                     new Date(threads[referenceId].date)
-    //                 )
-    //             ) {
-    //                 return;
-    //             }
+    function getParentTweets(parentId, referenceId) {
+        T.get(
+            `statuses/show`,
+            { id: parentId, tweet_mode: "extended" },
+            async function (err, status, response) {
+                const text = sanitizeHtml(status.full_text + "\n\n\n");
+                const isReply = !!status.in_reply_to_status_id_str;
+                const date = status.created_at;
 
-    //             if (isReply) {
-    //                 const parentId = status.in_reply_to_status_id_str;
-    //                 getParentTweets(parentId, referenceId);
+                // don't save the thread if the @add command is not added in the same day as the thread was written
+                if (
+                    !isSameDay(
+                        new Date(date),
+                        new Date(threads[referenceId].date)
+                    )
+                ) {
+                    return;
+                }
 
-    //                 threads[referenceId].tweets.push(text);
-    //             } else {
-    //                 threads[referenceId].tweets.push(text);
+                if (isReply) {
+                    const parentId = status.in_reply_to_status_id_str;
+                    getParentTweets(parentId, referenceId);
 
-    //                 // save to the DB
-    //                 const username = threads[referenceId].username;
-    //                 const date = threads[referenceId].date;
-    //                 const url = `https://twitter.com/${username}/status/${parentId}`;
+                    threads[referenceId].tweets.push(text);
+                } else {
+                    threads[referenceId].tweets.push(text);
 
-    //                 const full_text = threads[referenceId].tweets
-    //                     .reverse()
-    //                     .slice(0, -1)
-    //                     .reduce((acc, text) => (acc += text), "")
-    //                     // remove the last 3 \n
-    //                     .slice(0, -3);
+                    // save to the DB
+                    const username = threads[referenceId].username;
+                    const date = threads[referenceId].date;
+                    const url = `https://twitter.com/${username}/status/${parentId}`;
 
-    //                 const word_count = full_text
-    //                     .replace(/\s\s+/g, " ")
-    //                     .trim()
-    //                     .split(" ").length;
+                    const full_text = threads[referenceId].tweets
+                        .reverse()
+                        .slice(0, -1)
+                        .reduce((acc, text) => (acc += text), "")
+                        // remove the last 3 \n
+                        .slice(0, -3);
 
-    //                 // check if there is a user
-    //                 const { data: user, error: userError } = await supabase
-    //                     .from("public_users")
-    //                     .select("id, streak, last_day_posted")
-    //                     .eq("username", username)
-    //                     .single();
+                    const word_count = full_text
+                        .replace(/\s\s+/g, " ")
+                        .trim()
+                        .split(" ").length;
 
-    //                 if (user) {
-    //                     // console.log("user exist", username);
+                    // check if there is a user
+                    const { data: user, error: userError } = await supabase
+                        .from("public_users")
+                        .select("id, streak, last_day_posted")
+                        .eq("username", username)
+                        .single();
 
-    //                     const { id: user_id, streak, last_day_posted } = user;
-    //                     // we have a user, use it
-    //                     // create the post with the data
-    //                     const { data: post, error: postError } = await supabase
-    //                         .from("posts")
-    //                         .insert({
-    //                             id: referenceId,
-    //                             full_text,
-    //                             date,
-    //                             word_count,
-    //                             url,
-    //                             user_id,
-    //                         });
+                    if (user) {
+                        // console.log("user exist", username);
 
-    //                     if (post) {
-    //                         const sameDay = isSameDay(
-    //                             new Date(last_day_posted),
-    //                             new Date(date)
-    //                         );
+                        const { id: user_id, streak, last_day_posted } = user;
+                        // we have a user, use it
+                        // create the post with the data
+                        const { data: post, error: postError } = await supabase
+                            .from("posts")
+                            .insert({
+                                id: referenceId,
+                                full_text,
+                                date,
+                                word_count,
+                                url,
+                                user_id,
+                            });
 
-    //                         const newStreak = sameDay ? streak : streak + 1;
+                        if (post) {
+                            const sameDay = isSameDay(
+                                new Date(last_day_posted),
+                                new Date(date)
+                            );
 
-    //                         // update the user with the coresponding streak and last_day_posted
-    //                         await supabase
-    //                             .from("public_users")
-    //                             .update({
-    //                                 streak: newStreak,
-    //                                 last_day_posted: date,
-    //                             })
-    //                             .match({ id: user_id });
-    //                     }
-    //                 } else {
-    //                     // console.log("NEW user", username);
-    //                     // create the user
-    //                     const { data: user, error: userError } = await supabase
-    //                         .from("public_users")
-    //                         .insert({
-    //                             streak: 1,
-    //                             last_day_posted: date,
-    //                             username,
-    //                         })
-    //                         .single();
+                            const newStreak = sameDay ? streak : streak + 1;
 
-    //                     const user_id = user.id;
-    //                     // console.log(user);
+                            // update the user with the coresponding streak and last_day_posted
+                            await supabase
+                                .from("public_users")
+                                .update({
+                                    streak: newStreak,
+                                    last_day_posted: date,
+                                })
+                                .match({ id: user_id });
+                        }
+                    } else {
+                        console.log("NEW user", username);
+                        // create the user
+                        const { data: user, error: userError } = await supabase
+                            .from("public_users")
+                            .insert({
+                                streak: 1,
+                                last_day_posted: date,
+                                username,
+                            })
+                            .single();
 
-    //                     if (user) {
-    //                         await supabase
-    //                             .from("posts")
-    //                             .insert({
-    //                                 id: referenceId,
-    //                                 full_text,
-    //                                 date,
-    //                                 word_count,
-    //                                 url,
-    //                                 user_id,
-    //                             })
-    //                             .single();
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     );
-    // }
+                        const user_id = user.id;
+                        console.log(user);
 
-    // function isSameDay(date1, date2) {
-    //     return (
-    //         date1.getFullYear() === date2.getFullYear() &&
-    //         date1.getMonth() === date2.getMonth() &&
-    //         date1.getDate() === date2.getDate()
-    //     );
-    // }
+                        if (user) {
+                            await supabase
+                                .from("posts")
+                                .insert({
+                                    id: referenceId,
+                                    full_text,
+                                    date,
+                                    word_count,
+                                    url,
+                                    user_id,
+                                })
+                                .single();
+                        }
+                    }
+                }
+            }
+        );
+    }
 
-    // async function getPostById(id) {
-    //     const { data: post, error: postError } = await supabase
-    //         .from("posts")
-    //         .select("*")
-    //         .eq("id", id)
+    function isSameDay(date1, date2) {
+        return (
+            date1.getFullYear() === date2.getFullYear() &&
+            date1.getMonth() === date2.getMonth() &&
+            date1.getDate() === date2.getDate()
+        );
+    }
+
+    async function getPostById(id) {
+        const { data: post, error: postError } = await supabase
+            .from("posts")
+            .select("*")
+            .eq("id", id)
+            .single();
+
+        if (postError) {
+            console.error(postError);
+        }
+
+        return post;
+    }
+
+    // async function getUserByUsername(username) {
+    //     const { data: user, error: userError } = await supabase
+    //         .from("public_users")
+    //         .select("id")
+    //         .eq("username", username)
     //         .single();
 
-    //     if (postError) {
-    //         console.error(postError);
+    //     if (userError) {
+    //         console.error(userError);
     //     }
 
-    //     return post;
+    //     return user;
     // }
 
-    // // async function getUserByUsername(username) {
-    // //     const { data: user, error: userError } = await supabase
-    // //         .from("public_users")
-    // //         .select("id")
-    // //         .eq("username", username)
-    // //         .single();
-
-    // //     if (userError) {
-    // //         console.error(userError);
-    // //     }
-
-    // //     return user;
-    // // }
-
-    // // END OF THE CODE
+    // END OF THE CODE
 
     res.status(200).json(threads);
 }
