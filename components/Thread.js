@@ -36,10 +36,28 @@ const Thread = ({
                     __html: `<p class="bg-purple-900 shadow-sm rounded p-3">${excerpt
                         // taking care of stupid stuff
                         .replace(/<[^>]*>/g, "")
-                        // replaces return char with a paragraph
+                        // separates the tweets
                         .replace(
-                            /\n\n/g,
+                            /\n\n\n/g,
                             "</p><p class='mt-1 bg-purple-900 shadow-sm rounded p-3'>"
+                        )
+                        // adds spaces where the tweets have spaces
+                        .replace(/\n/g, "</br>")
+                        // resolves the hashtags
+                        .replace(
+                            /#+([a-zA-Z0-9_]+)/g,
+                            (value) =>
+                                `<a class="text-purple-300 font-semibold"  target="_blank" href="https://twitter.com/hashtag/${value.slice(
+                                    1
+                                )}">${value}</a>`
+                        )
+                        // resolves the @ mentions
+                        .replace(
+                            /@+([a-zA-Z0-9_]+)/g,
+                            (value) =>
+                                `<a class="text-purple-300 font-semibold" target="_blank" href="https://twitter.com/${value.slice(
+                                    1
+                                )}">${value}</a>`
                         )}</p>`,
                 }}
             />
